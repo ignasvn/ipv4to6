@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IPv4 → IPv6 Converter</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #030b14;
+    --panel: #060f1c;
+    --border: #0d2a42;
+    --accent: #00d4ff;
+    --accent2: #00ff9d;
+    --danger: #ff4560;
+    --text: #c8e6f5;
+    --dim: #3a6280;
+    --glow: 0 0 18px rgba(0,212,255,0.4);
+    --glow2: 0 0 18px rgba(0,255,157,0.35);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Scanline */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.07) 2px,
+      rgba(0,0,0,0.07) 4px
+    );
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 760px;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* Header */
+  header {
+    text-align: center;
+    margin-bottom: 44px;
+  }
+
+  .logo-tag {
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    opacity: 0.7;
+  }
+
+  h1 {
+    font-family: 'Orbitron', monospace;
+    font-weight: 900;
+    font-size: clamp(28px, 6vw, 52px);
+    line-height: 1;
+    letter-spacing: -1px;
+    color: #fff;
+    margin-bottom: 10px;
+  }
+
+  h1 span {
+    color: var(--accent);
+    text-shadow: var(--glow);
+  }
+
+  .subtitle {
+    font-size: 13px;
+    color: var(--dim);
+    letter-spacing: 2px;
+  }
+
+  /* Card */
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 32px;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  }
+
+  .field-label {
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  input[type="text"] {
+    flex: 1;
+    background: rgba(0,212,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: #fff;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 18px;
+    padding: 14px 18px;
+    outline: none;
+    letter-spacing: 1px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  input[type="text"]:focus {
+    border-color: var(--accent);
+    box-shadow: var(--glow);
+  }
+
+  input[type="text"].error {
+    border-color: var(--danger);
+    box-shadow: 0 0 14px rgba(255,69,96,0.3);
+  }
+
+  input[type="text"]::placeholder {
+    color: var(--dim);
+    font-size: 15px;
+  }
+
+  .btn-convert {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 3px;
+    font-family: 'Orbitron', monospace;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 2px;
+    padding: 14px 28px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+    white-space: nowrap;
+  }
+
+  .btn-convert:hover {
+    background: #33deff;
+    box-shadow: var(--glow);
+  }
+
+  .btn-convert:active { transform: scale(0.97); }
+
+  .error-msg {
+    color: var(--danger);
+    font-size: 12px;
+    letter-spacing: 1px;
+    margin-top: 10px;
+    min-height: 18px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .error-msg::before {
+    content: '✕';
+    font-size: 10px;
+    opacity: 0;
+  }
+
+  .error-msg.show::before { opacity: 1; }
+
+  /* Results */
+  .results {
+    display: none;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .results.visible { display: flex; }
+
+  .result-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 22px 26px;
+    position: relative;
+    overflow: hidden;
+    animation: slideIn 0.3s ease forwards;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .result-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent2), transparent);
+  }
+
+  .result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+
+  .result-type {
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--accent2);
+    text-transform: uppercase;
+  }
+
+  .btn-copy {
+    background: transparent;
+    border: 1px solid var(--dim);
+    color: var(--dim);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    padding: 5px 14px;
+    border-radius: 2px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s;
+  }
+
+  .btn-copy:hover {
+    border-color: var(--accent2);
+    color: var(--accent2);
+  }
+
+  .btn-copy.copied {
+    border-color: var(--accent2);
+    color: var(--accent2);
+  }
+
+  .result-value {
+    font-size: clamp(13px, 2.5vw, 18px);
+    color: #fff;
+    word-break: break-all;
+    line-height: 1.6;
+    text-shadow: 0 0 10px rgba(255,255,255,0.1);
+  }
+
+  /* Info section */
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 18px;
+  }
+
+  @media (max-width: 500px) { .info-grid { grid-template-columns: 1fr; } }
+
+  .info-item {
+    background: rgba(0,212,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 14px 18px;
+  }
+
+  .info-key {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--dim);
+    text-transform: uppercase;
+    margin-bottom: 5px;
+  }
+
+  .info-val {
+    font-size: 13px;
+    color: var(--text);
+  }
+
+  /* Formats section */
+  .formats-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 12px;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  /* Footer */
+  footer {
+    margin-top: 40px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--dim);
+    letter-spacing: 2px;
+    z-index: 2;
+    position: relative;
+  }
+
+  /* Octets visual */
+  .octet-vis {
+    display: flex;
+    gap: 8px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+  }
+
+  .octet-box {
+    flex: 1;
+    min-width: 60px;
+    background: rgba(0,212,255,0.05);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 10px;
+    text-align: center;
+  }
+
+  .octet-dec {
+    font-size: 16px;
+    color: var(--accent);
+    font-weight: bold;
+  }
+
+  .octet-hex {
+    font-size: 11px;
+    color: var(--dim);
+    margin-top: 4px;
+  }
+
+  .octet-bin {
+    font-size: 9px;
+    color: var(--dim);
+    margin-top: 2px;
+    letter-spacing: 0.5px;
+  }
+
+  .octet-label {
+    font-size: 9px;
+    color: var(--dim);
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="logo-tag">// Network Utility Tool</div>
+    <h1>IPv4 <span>→</span> IPv6</h1>
+    <div class="subtitle">KONVERTER ALAMAT IP</div>
+  </header>
+
+  <!-- Input Card -->
+  <div class="card">
+    <div class="field-label">Masukkan Alamat IPv4</div>
+    <div class="input-row">
+      <input type="text" id="ipInput" placeholder="contoh: 192.168.1.1" maxlength="15" autocomplete="off" spellcheck="false">
+      <button class="btn-convert" onclick="convert()">Konversi</button>
+    </div>
+    <div class="error-msg" id="errorMsg"></div>
+  </div>
+
+  <!-- Results -->
+  <div class="results" id="results">
+    <div class="result-card">
+      <div class="result-header">
+        <div class="result-type">IPv6 Full (Expanded)</div>
+        <button class="btn-copy" onclick="copyVal('ipv6Full', this)">Salin</button>
+      </div>
+      <div class="result-value" id="ipv6Full"></div>
+    </div>
+
+    <div class="result-card">
+      <div class="result-header">
+        <div class="result-type">IPv6 Compressed</div>
+        <button class="btn-copy" onclick="copyVal('ipv6Compressed', this)">Salin</button>
+      </div>
+      <div class="result-value" id="ipv6Compressed"></div>
+    </div>
+
+    <div class="result-card">
+      <div class="result-header">
+        <div class="result-type">IPv4-Mapped IPv6</div>
+        <button class="btn-copy" onclick="copyVal('ipv6Mapped', this)">Salin</button>
+      </div>
+      <div class="result-value" id="ipv6Mapped"></div>
+    </div>
+
+    <div class="result-card">
+      <div class="result-header">
+        <div class="result-type">Detail Oktet & Representasi</div>
+        <span></span>
+      </div>
+      <div class="octet-vis" id="octetVis"></div>
+      <div class="info-grid" id="infoGrid"></div>
+    </div>
+  </div>
+
+  <footer>IPv4 TO IPv6 CONVERTER &nbsp;|&nbsp; MADE WITH ♦ IN INDONESIA</footer>
+</div>
+
+<script>
+  // Allow Enter key
+  document.getElementById('ipInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') convert();
+  });
+
+  function showError(msg) {
+    const el = document.getElementById('errorMsg');
+    el.textContent = msg;
+    el.classList.toggle('show', !!msg);
+    document.getElementById('ipInput').classList.toggle('error', !!msg);
+  }
+
+  function validateIPv4(ip) {
+    const parts = ip.split('.');
+    if (parts.length !== 4) return false;
+    for (const p of parts) {
+      if (p === '' || isNaN(p)) return false;
+      const n = parseInt(p, 10);
+      if (n < 0 || n > 255) return false;
+      if (p.length > 1 && p[0] === '0') return false; // leading zeros
+    }
+    return true;
+  }
+
+  function padHex(n) {
+    return n.toString(16).padStart(2, '0');
+  }
+
+  function toBin(n) {
+    return n.toString(2).padStart(8, '0');
+  }
+
+  function convert() {
+    const raw = document.getElementById('ipInput').value.trim();
+    showError('');
+    document.getElementById('results').classList.remove('visible');
+
+    if (!raw) { showError('Masukkan alamat IPv4 terlebih dahulu.'); return; }
+    if (!validateIPv4(raw)) { showError('Format IPv4 tidak valid. Gunakan format: 0-255.0-255.0-255.0-255'); return; }
+
+    const parts = raw.split('.').map(Number);
+    const [a, b, c, d] = parts;
+
+    // Hex octets
+    const h = parts.map(n => padHex(n));
+
+    // IPv6 Full Expanded (IPv4-compatible, legacy)
+    // ::ffff:x:x format expanded
+    const ipv6Full = `0000:0000:0000:0000:0000:ffff:${h[0]}${h[1]}:${h[2]}${h[3]}`;
+
+    // IPv6 Compressed
+    const ipv6Compressed = `::ffff:${h[0]}${h[1]}:${h[2]}${h[3]}`;
+
+    // IPv4-mapped (dotted decimal notation in last 32 bits)
+    const ipv6Mapped = `::ffff:${raw}`;
+
+    document.getElementById('ipv6Full').textContent = ipv6Full;
+    document.getElementById('ipv6Compressed').textContent = ipv6Compressed;
+    document.getElementById('ipv6Mapped').textContent = ipv6Mapped;
+
+    // Octet visual
+    const octetVis = document.getElementById('octetVis');
+    octetVis.innerHTML = '';
+    const labels = ['Oktet 1', 'Oktet 2', 'Oktet 3', 'Oktet 4'];
+    parts.forEach((n, i) => {
+      octetVis.innerHTML += `
+        <div class="octet-box">
+          <div class="octet-label">${labels[i]}</div>
+          <div class="octet-dec">${n}</div>
+          <div class="octet-hex">0x${h[i].toUpperCase()}</div>
+          <div class="octet-bin">${toBin(n)}</div>
+        </div>
+      `;
+    });
+
+    // Info grid
+    const classInfo = getIPClass(a);
+    const isPrivate = checkPrivate(a, b, c);
+    const totalHex = h.join('').toUpperCase();
+    const totalBin = parts.map(n => toBin(n)).join('.');
+
+    document.getElementById('infoGrid').innerHTML = `
+      <div class="info-item"><div class="info-key">Kelas IP</div><div class="info-val">${classInfo}</div></div>
+      <div class="info-item"><div class="info-key">Tipe</div><div class="info-val">${isPrivate ? '🔒 Private' : '🌐 Public'}</div></div>
+      <div class="info-item"><div class="info-key">Heksadesimal</div><div class="info-val">0x${totalHex}</div></div>
+      <div class="info-item"><div class="info-key">Biner</div><div class="info-val" style="font-size:11px;word-break:break-all">${totalBin}</div></div>
+      <div class="info-item"><div class="info-key">Desimal (32-bit)</div><div class="info-val">${(a<<24>>>0) + (b<<16) + (c<<8) + d}</div></div>
+      <div class="info-item"><div class="info-key">Prefix IPv6</div><div class="info-val">::ffff:0:0/96</div></div>
+    `;
+
+    document.getElementById('results').classList.add('visible');
+  }
+
+  function getIPClass(a) {
+    if (a < 128) return 'Kelas A (1–126)';
+    if (a < 192) return 'Kelas B (128–191)';
+    if (a < 224) return 'Kelas C (192–223)';
+    if (a < 240) return 'Kelas D (Multicast)';
+    return 'Kelas E (Eksperimental)';
+  }
+
+  function checkPrivate(a, b, c) {
+    if (a === 10) return true;
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    if (a === 192 && b === 168) return true;
+    if (a === 127) return true;
+    return false;
+  }
+
+  async function copyVal(id, btn) {
+    const text = document.getElementById(id).textContent;
+    try {
+      await navigator.clipboard.writeText(text);
+      const orig = btn.textContent;
+      btn.textContent = 'Tersalin!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 1800);
+    } catch(e) {
+      // fallback
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+  }
+</script>
+</body>
+</html>
